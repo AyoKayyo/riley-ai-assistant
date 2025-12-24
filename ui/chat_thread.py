@@ -3,21 +3,54 @@ ChatThread - FINAL Gemini 2025 Premium UI
 Perfect fonts, spacing, line-height, and typography
 """
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
-                             QLabel, QFrame, QScrollArea)
-from PyQt6.QtCore import Qt
+                             QLabel, QFrame, QScrollArea, QPushButton, QApplication)
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QFont
 
 
 class MessageWidget(QFrame):
-    """Individual message with premium Gemini typography"""
+    """Individual message with premium Gemini typography + copy button"""
     
     def __init__(self, text, is_user):
         super().__init__()
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.original_text = text  # Store for copy functionality
+        self.is_user = is_user
+        
+        # Main vertical layout
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(4)
+        
+        # Horizontal layout for text + copy button
+        h_layout = QHBoxLayout()
+        h_layout.setSpacing(8)
         
         self.text_label = QLabel()
         self.text_label.setWordWrap(True)
         self.text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        h_layout.addWidget(self.text_label, 1)  # Stretch factor 1
+        
+        # Copy button (initially hidden, shows on hover)
+        self.copy_btn = QPushButton("📋")
+        self.copy_btn.setFixedSize(32, 32)
+        self.copy_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2b2d31;
+                color: #ffffff;
+                border: none;
+                border-radius: 6px;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: #3b3d41;
+            }
+        """)
+        self.copy_btn.clicked.connect(self.copy_to_clipboard)
+        self.copy_btn.hide()  # Hidden by default
+        h_layout.addWidget(self.copy_btn)
+        
+        main_layout.addLayout(h_layout)
+        self.layout = main_layout  # Keep reference for compatibility
         
         if is_user:
             # User Bubble: Grey layered effect, rounded
@@ -49,16 +82,29 @@ class MessageWidget(QFrame):
                     padding: 0px;
                 }
             """)
-            
-        self.layout.addWidget(self.text_label)
-        self.is_user = is_user
+    
 
     def update_text(self, text):
         """Legacy update method"""
         self.update_typed_text(text)
 
+    def copy_to_clipboard(self):
+        """Copy message text to clipboard"""
+        QApplication.clipboard().setText(self.original_text)
+    
+    def enterEvent(self, event):
+        """Show copy button on hover"""
+        self.copy_btn.show()
+        super().enterEvent(event)
+    
+    def leaveEvent(self, event):
+        """Hide copy button when not hovering"""
+        self.copy_btn.hide()
+        super().leaveEvent(event)
+
     def update_typed_text(self, text):
         """Receives the growing string from the TypingWorker"""
+        self.original_text = text  # Update for copy
         if self.is_user:
              self.text_label.setText(text)
         else:
@@ -88,6 +134,18 @@ class ChatThread(QScrollArea):
         super().__init__()
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)  # HIDE SCROLLBAR
+        
+        # Remove scrollbar visual completely
+        self.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollBar:vertical {
+                width: 0px;  /* Hide scrollbar */
+            }
+        """)
         
         self.container = QWidget()
         self.container.setObjectName("ThreadContainer")
@@ -115,8 +173,8 @@ class ChatThread(QScrollArea):
         
         self.thread_layout.addLayout(wrapper)
         
-        # Auto-scroll to bottom
-        self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
+        # Improved auto-scroll with delay to ensure layout is complete
+        QTimer.singleShot(50, self.scroll_to_bottom)
         
         return bubble
 
