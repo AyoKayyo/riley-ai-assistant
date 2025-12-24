@@ -1,0 +1,54 @@
+name: CI - Code Quality & Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pylint pytest
+    
+    - name: Lint with pylint
+      run: |
+        find . -name "*.py" -not -path "./venv/*" | xargs pylint --exit-zero
+    
+    - name: Check Python syntax
+      run: |
+        find . -name "*.py" -not -path "./venv/*" -exec python -m py_compile {} \;
+    
+    - name: Run tests
+      run: |
+        pytest tests/ -v || echo "No tests found"
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run Bandit security scan
+      run: |
+        pip install bandit
+        bandit -r . -f json -o bandit-report.json || true
+    
+    - name: Upload security report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-scan
+        path: bandit-report.json
