@@ -25,6 +25,7 @@ class ConversationDB:
             CREATE TABLE IF NOT EXISTS conversations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT,
+                agent_name TEXT DEFAULT 'Riley',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -42,12 +43,25 @@ class ConversationDB:
             )
         """)
         self.conn.commit()
+        
+        # Run migration for existing databases
+        self._migrate_add_agent_column()
 
-    def create_conversation(self, title: str = None) -> int:
+    def _migrate_add_agent_column(self):
+        """Migration: Add agent_name column if it doesn't exist"""
+        cursor = self.conn.cursor()
+        try:
+            cursor.execute("ALTER TABLE conversations ADD COLUMN agent_name TEXT DEFAULT 'Riley'")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_conversations_agent ON conversations(agent_name)")
+            self.conn.commit()
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+    
+    def create_conversation(self, title: str = None, agent_name: str = "Riley") -> int:
         if title is None:
             title = f"Chat - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
         cursor = self.conn.cursor()
-        cursor.execute("INSERT INTO conversations (title) VALUES (?)", (title,))
+        cursor.execute("INSERT INTO conversations (title, agent_name) VALUES (?, ?)", (title, agent_name))
         self.conn.commit()
         return cursor.lastrowid
 
@@ -74,12 +88,36 @@ class ConversationDB:
         """Get list of recent conversations"""
         cursor = self.conn.cursor()
         cursor.execute("""
-            SELECT c.id, c.title, c.created_at, c.updated_at,
+            SELECT c.id, c.title, c.agent_name, c.created_at, c.updated_at,
                    (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) as message_count
             FROM conversations c
             ORDER BY c.updated_at DESC
             LIMIT ?
         """, (limit,))
+        
+        conversations = []
+        for row in cursor.fetchall():
+            conversations.append({
+                'id': row['id'],
+                'title': row['title'],
+                'agent_name': row['agent_name'] if 'agent_name' in row.keys() else 'Riley',
+                'created_at': row['created_at'],
+                'updated_at': row['updated_at'],
+                'message_count': row['message_count']
+            })
+        return conversations
+    
+    def get_conversations_by_agent(self, agent_name: str, limit: int = 20) -> List[Dict[str, Any]]:
+        """Get conversations for a specific agent"""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT c.id, c.title, c.created_at, c.updated_at,
+                   (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id) as message_count
+            FROM conversations c
+            WHERE c.agent_name = ?
+            ORDER BY c.updated_at DESC
+            LIMIT ?
+        """, (agent_name, limit))
         
         conversations = []
         for row in cursor.fetchall():

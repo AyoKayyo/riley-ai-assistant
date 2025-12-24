@@ -94,6 +94,99 @@ class CommandCenter(QMainWindow):
         self.conversation_db = ConversationDB()
         self.current_conversation_id = self.conversation_db.create_conversation()
         
+    def new_chat(self):
+        """Create a new conversation (for current gem/agent)"""
+        current_agent = getattr(self, 'current_gem', 'Riley')
+        self.current_conversation_id = self.conversation_db.create_conversation(agent_name=current_agent)
+        self.chat_display.clear()
+        self.load_recent_chats()  # Refresh sidebar
+        
+    def switch_to_gem(self, agent_name):
+        """Switch to a different agent/gem"""
+        self.current_gem = agent_name
+        
+        # Highlight active gem
+        for name, btn in self.gem_buttons.items():
+            if name == agent_name:
+                btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #2a2a2a;
+                        color: #ffffff;
+                        border: none;
+                        border-radius: 6px;
+                        padding: 8px 12px;
+                        text-align: left;
+                    }
+                """)
+            else:
+                btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: transparent;
+                        color: #cccccc;
+                        border: none;
+                        border-radius: 6px;
+                        padding: 8px 12px;
+                        text-align: left;
+                    }
+                    QPushButton:hover {
+                        background-color: #1a1a1a;
+                        color: #ffffff;
+                    }
+                """)
+        
+        # Create new chat for this agent
+        self.new_chat()
+        
+    def load_recent_chats(self):
+        """Load recent conversations from database into sidebar"""
+        # Clear existing chat buttons
+        while self.chats_layout.count():
+            child = self.chats_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+        
+        # Get recent conversations
+        conversations = self.conversation_db.get_recent_conversations(limit=15)
+        
+        for conv in conversations:
+            chat_btn = QPushButton(conv['title'])
+            chat_btn.setFont(QFont(".AppleSystemUIFont", 11))
+            chat_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: transparent;
+                    color: #999999;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 6px 10px;
+                    text-align: left;
+                }
+                QPushButton:hover {
+                    background-color: #1a1a1a;
+                    color: #ffffff;
+                }
+            """)
+            chat_btn.clicked.connect(lambda checked, conv_id=conv['id']: self.load_conversation(conv_id))
+            self.chats_layout.addWidget(chat_btn)
+    
+    def filter_chats(self, search_text):
+        """Filter visible chats based on search text"""
+        search_lower = search_text.lower()
+        
+        for i in range(self.chats_layout.count()):
+            widget = self.chats_layout.itemAt(i).widget()
+            if widget and isinstance(widget, QPushButton):
+                button_text = widget.text().lower()
+                widget.setVisible(search_lower in button_text)
+    
+    def load_conversation(self, conversation_id):
+        """Load a past conversation into the chat display"""
+        self.current_conversation_id = conversation_id
+        self.chat_display.clear()
+        
+        messages = self.conversation_db.get_conversation_messages(conversation_id)
+        for msg in messages:
+            is_user = msg['role'] == 'user'
+            self.chat_display.add_message(msg['content'], is_user=is_user)
         self.agent_thread = None
         self.current_agent = self.companion.name  # Use Companion's chosen name
         self.architect_mode = False
@@ -157,118 +250,68 @@ class CommandCenter(QMainWindow):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
         
-        # ARCHITECT TOGGLE - WHITE WHEN ON
-        self.architect_toggle = QPushButton("Architect Mode: OFF")
-        self.architect_toggle.setCheckable(True)
-        self.architect_toggle.setFont(QFont(".AppleSystemUIFont", 13, QFont.Weight.Bold))
-        self.architect_toggle.setStyleSheet("""
-            QPushButton {
+        # === GEMINI-STYLE SIDEBAR ===
+        
+        # 1. SEARCH BAR
+        search_input = QLineEdit()
+        search_input.setPlaceholderText("🔍 Search for chats")
+        search_input.setStyleSheet("""
+            QLineEdit {
                 background-color: #1a1a1a;
-                color: #808080;
-                border: 2px solid #2a2a2a;
-                border-radius: 8px;
-                padding: 14px;
-                text-align: center;
-            }
-            QPushButton:checked {
-                background-color: #2a2a2a;
                 color: #ffffff;
-                border-color: #ffffff;
+                border: 1px solid #2a2a2a;
+                border-radius: 8px;
+                padding: 10px;
+                font-size: 13px;
             }
-            QPushButton:hover {
-                background-color: #2a2a2a;
+            QLineEdit:focus {
+                border: 1px solid #3a3a3a;
             }
         """)
-        self.architect_toggle.clicked.connect(self.toggle_architect_mode)
-        layout.addWidget(self.architect_toggle)
+        search_input.textChanged.connect(self.filter_chats)
+        layout.addWidget(search_input)
+        layout.addSpacing(10)
         
-        layout.addSpacing(8)
-        
-        # NEW CHAT - WHITE
-        new_chat_btn = QPushButton("+ New chat")
+        # 2. NEW CHAT BUTTON
+        new_chat_btn = QPushButton("✏️  New chat")
         new_chat_btn.setFont(QFont(".AppleSystemUIFont", 13))
         new_chat_btn.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
-                color: #ffffff;
+                color: #cccccc;
                 border: 1px solid #2a2a2a;
-                border-radius: 6px;
-                padding: 12px;
+                border-radius: 8px;
+                padding: 10px;
                 text-align: left;
             }
             QPushButton:hover {
                 background-color: #1a1a1a;
+                color: #ffffff;
             }
         """)
         new_chat_btn.clicked.connect(self.new_chat)
         layout.addWidget(new_chat_btn)
+        layout.addSpacing(15)
         
-        # NEW AGENT - WHITE
-        new_agent_btn = QPushButton("+ New agent")
-        new_agent_btn.setFont(QFont(".AppleSystemUIFont", 13))
-        new_agent_btn.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                color: #ffffff;
-                border: 1px solid #2a2a2a;
-                border-radius: 6px;
-                padding: 12px;
-                text-align: left;
-            }
-            QPushButton:hover {
-                background-color: #1a1a1a;
-            }
-        """)
-        new_agent_btn.clicked.connect(self.build_agent)
-        layout.addWidget(new_agent_btn)
+        # 3. GEMS SECTION (Agents)
+        gems_label = QLabel("Gems")
+        gems_label.setFont(QFont(".AppleSystemUIFont", 10, QFont.Weight.Bold))
+        gems_label.setStyleSheet("color: #666666; padding: 4px;")
+        layout.addWidget(gems_label)
         
-        # THE SQUAD (Riley's Agents)
-        layout.addSpacing(8)
-        squad_label = QLabel("The Squad")
-        squad_label.setFont(QFont(".AppleSystemUIFont", 10))
-        squad_label.setStyleSheet("color: #666666; padding: 4px;")
-        layout.addWidget(squad_label)
+        # Store gem buttons for highlighting
+        self.gem_buttons = {}
         
-        features = [
-            ("Code Generator", self.open_code_generator),
-            ("Research", self.open_research),
-            ("Python/Terminal", self.open_terminal),
-            ("Memory", self.open_memory),
-            ("Settings", self.open_settings)
+        gems = [
+            ("Riley", "💎", "Riley"),
+            ("Architect", "🏗️", "Architect"),
+            ("Coder", "💻", "Coder"),
+            ("Researcher", "🔍", "Researcher"),
+            ("Terminal", "⚡", "Terminal")
         ]
         
-        # SYSTEM HEARTBEAT
-        layout.addSpacing(20)
-        heartbeat_label = QLabel(" System")
-        heartbeat_label.setFont(QFont(".AppleSystemUIFont", 10))
-        heartbeat_label.setStyleSheet("color: #666666; padding: 4px;")
-        layout.addWidget(heartbeat_label)
-        
-        # Real-time stats labels
-        self.stats_container = QWidget()
-        stats_layout = QVBoxLayout(self.stats_container)
-        stats_layout.setContentsMargins(12, 0, 0, 0)
-        stats_layout.setSpacing(4)
-        
-        self.cpu_label = QLabel("CPU: ...")
-        self.cpu_label.setStyleSheet("color: #808080; font-size: 11px;")
-        self.ram_label = QLabel("Memory: ...")
-        self.ram_label.setStyleSheet("color: #808080; font-size: 11px;")
-        self.disk_label = QLabel("Disk: ...")
-        self.disk_label.setStyleSheet("color: #808080; font-size: 11px;")
-        
-        stats_layout.addWidget(self.cpu_label)
-        stats_layout.addWidget(self.ram_label)
-        stats_layout.addWidget(self.disk_label)
-        layout.addWidget(self.stats_container)
-        
-        # Start Heartbeat Timer
-        self.heartbeat_timer = QTimer(self)
-        self.heartbeat_timer.timeout.connect(self.update_heartbeat)
-        self.heartbeat_timer.start(2000) # Check every 2 seconds
-        
-        for name, callback in features:
-            btn = QPushButton(name)
+        for name, icon, agent_name in gems:
+            btn = QPushButton(f"{icon}  {name}")
             btn.setFont(QFont(".AppleSystemUIFont", 12))
             btn.setStyleSheet("""
                 QPushButton {
@@ -284,38 +327,55 @@ class CommandCenter(QMainWindow):
                     color: #ffffff;
                 }
             """)
-            btn.clicked.connect(callback)
+            btn.clicked.connect(lambda checked, a=agent_name: self.switch_to_gem(a))
+            self.gem_buttons[agent_name] = btn
             layout.addWidget(btn)
         
-        # SEPARATOR
+        layout.addSpacing(15)
+        
+        # 4. CHATS SECTION (History)
+        chats_label = QLabel("Chats")
+        chats_label.setFont(QFont(".AppleSystemUIFont", 10, QFont.Weight.Bold))
+        chats_label.setStyleSheet("color: #666666; padding: 4px;")
+        layout.addWidget(chats_label)
+        
+        # Chat history container (will be populated from database)
+        self.chats_container = QWidget()
+        self.chats_layout = QVBoxLayout(self.chats_container)
+        self.chats_layout.setContentsMargins(0, 0, 0, 0)
+        self.chats_layout.setSpacing(2)
+        layout.addWidget(self.chats_container)
+        
+        # Load recent chats
+        self.load_recent_chats()
+        
+        layout.addStretch()
+        
+        # 5. SETTINGS (Bottom)
         separator = QFrame()
         separator.setFixedHeight(1)
         separator.setStyleSheet("background-color: #1a1a1a; margin: 8px 0;")
         layout.addWidget(separator)
         
-        # PAST CHATS
-        past_label = QLabel("Past chats")
-        past_label.setFont(QFont(".AppleSystemUIFont", 10))
-        past_label.setStyleSheet("color: #666666; padding: 4px;")
-        layout.addWidget(past_label)
-        
-        for chat in ["Built WordPress deployer", "Designed assistant", "Created UI"]:
-            chat_btn = QPushButton(chat)
-            chat_btn.setFont(QFont(".AppleSystemUIFont", 12))
-            chat_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: transparent;
-                    color: #999999;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 8px 12px;
-                    text-align: left;
-                }
-                QPushButton:hover {
-                    background-color: #1a1a1a;
-                }
-            """)
-            layout.addWidget(chat_btn)
+        settings_btn = QPushButton("⚙️  Settings & help")
+        settings_btn.setFont(QFont(".AppleSystemUIFont", 12))
+        settings_btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #cccccc;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 12px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #1a1a1a;
+                color: #ffffff;
+            }
+        """)
+        settings_btn.clicked.connect(self.open_settings)
+        layout.addWidget(settings_btn)
+
         
         layout.addStretch()
         
