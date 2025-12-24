@@ -737,27 +737,27 @@ class CommandCenter(QMainWindow):
         
         if current_gem == "Riley":
             # Direct Riley chat - she handles orchestration
-            self._send_to_riley(message)
+            self._send_to_riley(user_input)
             
         elif current_gem == "Architect":
             # Direct Architect access (Gemini)
-            self._send_to_architect(message)
+            self._send_to_architect(user_input)
             
         elif current_gem == "Coder":
             # Direct Coder access
-            self._send_to_coder(message)
+            self._send_to_coder(user_input)
             
         elif current_gem == "Researcher":
             # Direct Researcher access
-            self._send_to_researcher(message)
+            self._send_to_researcher(user_input)
             
         elif current_gem == "Terminal":
             # Direct Executor access
-            self._send_to_executor(message)
+            self._send_to_executor(user_input)
         
         else:
             # Fallback to Riley
-            self._send_to_riley(message)
+            self._send_to_riley(user_input)
     
     def _send_to_riley(self, message):
         """Send message to Riley (Companion) - she orchestrates"""
