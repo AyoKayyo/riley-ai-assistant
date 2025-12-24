@@ -97,6 +97,7 @@ class CommandCenter(QMainWindow):
         self.agent_thread = None
         self.current_agent = self.companion.name
         self.architect_mode = False
+        self.browser_mode_enabled = False  # Browser Mode toggle
         self.first_launch = not self.memory.get("companion_name")
         self.current_gem = "Riley"  # Track active gem
         
@@ -164,33 +165,6 @@ class CommandCenter(QMainWindow):
         
         # Create new chat for this agent FIRST
         self.new_chat()
-        
-        # GOD MODE: Activate browser agent for Researcher (AFTER clearing chat)
-        if agent_name == "Researcher":
-            # Lazy load browser agent (isolated, won't break Riley if it fails)
-            try:
-                from agents.browser_agent import BrowserManager
-                self.browser_manager = BrowserManager()
-                self.chat_display.add_message(
-                    "🌎 **God Mode Active.** I can browse the live web with a real Chrome browser.\\n\\n" +
-                    "Give me a mission (e.g., 'Go to Amazon and find the cheapest RTX 4090')",
-                    is_user=False
-                )
-                self.input_field.setPlaceholderText("Enter your web mission...")
-            except ImportError as e:
-                self.chat_display.add_message(
-                    f"❌ **God Mode unavailable:** {str(e)}\\n\\n" +
-                    "Run: `pip install browser-use playwright && playwright install chromium`",
-                    is_user=False
-                )
-            except Exception as e:
-                self.chat_display.add_message(
-                    f"❌ **Browser agent error:** {str(e)}",
-                    is_user=False
-                )
-        else:
-            # Reset placeholder for other agents
-            self.input_field.setPlaceholderText("Message Riley...")
         
     def load_recent_chats(self):
         """Load recent conversations from database into sidebar"""
@@ -682,9 +656,9 @@ class CommandCenter(QMainWindow):
         if self.conversation_db and self.current_conversation_id:
             self.conversation_db.add_message(self.current_conversation_id, 'user', user_input)
         
-        # GOD MODE: Execute browser mission for Researcher
-        if hasattr(self, 'current_gem') and self.current_gem == "Researcher" and hasattr(self, 'browser_manager'):
-            # Run browser mission in background thread (keep UI responsive)
+        # BROWSER MODE: Execute with Chrome if enabled (like ChatGPT browsing)
+        if self.browser_mode_enabled and hasattr(self, 'browser_manager'):
+            # Run browser mission in background thread
             from PyQt6.QtCore import QThread, pyqtSignal
             
             class BrowserWorker(QThread):
@@ -703,16 +677,16 @@ class CommandCenter(QMainWindow):
                     except Exception as e:
                         self.error.emit(f"Browser mission failed: {str(e)}")
             
-            # Show "thinking" indicator
-            thinking_bubble = self.chat_display.add_message(
-                "🌎 **Launching browser agent...**\nThis may take a moment. A Chrome window will open.",
+            # Show launching message
+            self.chat_display.add_message(
+                "🌎 **Launching browser...**\nA Chrome window will open.",
                 is_user=False
             )
             
             # Start browser worker
             self.browser_worker = BrowserWorker(self.browser_manager, user_input)
             self.browser_worker.finished.connect(lambda result: self.chat_display.add_message(
-                f"✅ **Mission Complete:**\n\n{result}",
+                f"✅ **Browser Task Complete:**\n\n{result}",
                 is_user=False
             ))
             self.browser_worker.error.connect(lambda err: self.chat_display.add_message(
@@ -720,6 +694,9 @@ class CommandCenter(QMainWindow):
                 is_user=False
             ))
             self.browser_worker.start()
+            
+            # Auto-disable browser mode after use
+            self.browser_mode_enabled = False
             return
         
         # ARCHITECT MODE ROUTING (existing logic)
@@ -981,23 +958,53 @@ class CommandCenter(QMainWindow):
             
             # Update placeholder to indicate attachment ready
             self.input_field.setPlaceholderText(f"File attached: {attachment_data['filename']} - Send message...")
-            
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to process file:\n{str(e)}")
 
     
     def open_tools_menu(self):
-        """Show Tools Menu (3 dots)"""
+        """Show Tools Menu (3 dots) with Browser Mode toggle"""
         from PyQt6.QtWidgets import QMenu
         from PyQt6.QtGui import QCursor
         
         menu = QMenu(self)
+        
+        # Browser Mode toggle (like ChatGPT browsing)
+        browser_action = menu.addAction("🌎 Browser Mode: " + ("ON" if self.browser_mode_enabled else "OFF"))
+        browser_action.triggered.connect(self.toggle_browser_mode)
+        menu.addSeparator()
+        
         menu.addAction("Settings", self.open_settings)
         menu.addAction("Memory", self.open_memory)
         menu.addAction("Code Generator", self.open_code_generator)
         menu.addAction("Research", self.open_research)
         menu.addAction("Terminal", self.open_terminal)
         menu.exec(QCursor.pos())
+    
+    def toggle_browser_mode(self):
+        """Toggle browser mode on/off"""
+        self.browser_mode_enabled = not self.browser_mode_enabled
+        
+        if self.browser_mode_enabled:
+            # Initialize browser manager
+            try:
+                from agents.browser_agent import BrowserManager
+                self.browser_manager = BrowserManager()
+                self.chat_display.add_message(
+                    "🌎 **Browser Mode Enabled**\nI'll use a real Chrome browser for your next task.",
+                    is_user=False
+                )
+            except Exception as e:
+                self.browser_mode_enabled = False
+                self.chat_display.add_message(
+                    f"❌ Browser Mode failed: {str(e)}\nRun: `pip install browser-use playwright`",
+                    is_user=False
+                )
+        else:
+            self.chat_display.add_message(
+                "Browser Mode Disabled",
+                is_user=False
+            )
     
     def open_code_generator(self):
         QMessageBox.information(self, "Code Generator", "Code generation tool")
