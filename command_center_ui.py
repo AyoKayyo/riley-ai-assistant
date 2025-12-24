@@ -990,25 +990,12 @@ class CommandCenter(QMainWindow):
         menu = QMenu(self)
         menu.setStyleSheet("""
             QMenu {
-                background-color: #1a1a1a;
-                color: #ffffff;
-                border: 1px solid #333333;
-            }
-            QMenu::item {
-                padding: 8px 20px;
-            }
-            QMenu::item:selected {
-                background-color: #333333;
-            }
-        """)
-        
-        # Add registered agents to menu
-        for agent_name in self.mcp.agents.keys():
-            action = menu.addAction(agent_name.capitalize())
-            # Connect action (requires partial to capture name)
-            # For now just showing list
-            
-        menu.exec(QTextCursor.pos()) # Show at cursor position? No, show at button
+        menu.addAction("Settings", self.open_settings)
+        menu.addAction("Memory", self.open_memory)
+        menu.addAction("Code Generator", self.open_code_generator)
+        menu.addAction("Research", self.open_research)
+        menu.addAction("Terminal", self.open_terminal)
+        menu.exec(QCursor.pos())  # Show at mouse position
         # Actually standard QMenu usage is simpler
     
     def open_code_generator(self):
