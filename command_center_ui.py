@@ -162,6 +162,33 @@ class CommandCenter(QMainWindow):
                     }
                 """)
         
+        # GOD MODE: Activate browser agent for Researcher
+        if agent_name == "Researcher":
+            # Lazy load browser agent (isolated, won't break Riley if it fails)
+            try:
+                from agents.browser_agent import BrowserManager
+                self.browser_manager = BrowserManager()
+                self.chat_display.add_message(
+                    "🌎 **God Mode Active.** I can browse the live web with a real Chrome browser.\\n\\n" +
+                    "Give me a mission (e.g., 'Go to Amazon and find the cheapest RTX 4090')",
+                    is_user=False
+                )
+                self.input_field.setPlaceholderText("Enter your web mission...")
+            except ImportError as e:
+                self.chat_display.add_message(
+                    f"❌ **God Mode unavailable:** {str(e)}\\n\\n" +
+                    "Run: `pip install browser-use playwright && playwright install chromium`",
+                    is_user=False
+                )
+            except Exception as e:
+                self.chat_display.add_message(
+                    f"❌ **Browser agent error:** {str(e)}",
+                    is_user=False
+                )
+        else:
+            # Reset placeholder for other agents
+            self.input_field.setPlaceholderText("Message Riley...")
+        
         # Create new chat for this agent
         self.new_chat()
         
@@ -643,22 +670,63 @@ class CommandCenter(QMainWindow):
         self.chat_display.add_message(message, is_user=is_user)
     
     def send_message(self):
-        """Send message to the currently active gem's agent"""
-        message = self.input_field.text().strip()
-        if not message:
+        user_input = self.input_field.text().strip()
+        if not user_input:
             return
         
-        # 1. Display user message in current gem's chat
-        self.chat_display.add_message(message, is_user=True)
+        # Display user message
+        self.chat_display.add_message(user_input, is_user=True)
         self.input_field.clear()
         
-        # 2. Save to database with correct agent context
-        if self.conversation_db:
-            self.conversation_db.add_message(
-                self.current_conversation_id, 
-                "user", 
-                message
+        # Save to database
+        if self.conversation_db and self.current_conversation_id:
+            self.conversation_db.add_message(self.current_conversation_id, 'user', user_input)
+        
+        # GOD MODE: Execute browser mission for Researcher
+        if hasattr(self, 'current_gem') and self.current_gem == "Researcher" and hasattr(self, 'browser_manager'):
+            # Run browser mission in background thread (keep UI responsive)
+            from PyQt6.QtCore import QThread, pyqtSignal
+            
+            class BrowserWorker(QThread):
+                finished = pyqtSignal(str)
+                error = pyqtSignal(str)
+                
+                def __init__(self, browser_manager, task):
+                    super().__init__()
+                    self.browser_manager = browser_manager
+                    self.task = task
+                
+                def run(self):
+                    try:
+                        result = self.browser_manager.execute_sync(self.task)
+                        self.finished.emit(result)
+                    except Exception as e:
+                        self.error.emit(f"Browser mission failed: {str(e)}")
+            
+            # Show "thinking" indicator
+            thinking_bubble = self.chat_display.add_message(
+                "🌎 **Launching browser agent...**\nThis may take a moment. A Chrome window will open.",
+                is_user=False
             )
+            
+            # Start browser worker
+            self.browser_worker = BrowserWorker(self.browser_manager, user_input)
+            self.browser_worker.finished.connect(lambda result: self.chat_display.add_message(
+                f"✅ **Mission Complete:**\n\n{result}",
+                is_user=False
+            ))
+            self.browser_worker.error.connect(lambda err: self.chat_display.add_message(
+                f"❌ {err}",
+                is_user=False
+            ))
+            self.browser_worker.start()
+            return
+        
+        # ARCHITECT MODE ROUTING (existing logic)
+        if self.architect_mode:
+            # If architect mode is on, all messages go to architect
+            self._send_to_architect(user_input)
+            return
         
         # 3. Route based on active gem
         current_gem = getattr(self, 'current_gem', 'Riley')
