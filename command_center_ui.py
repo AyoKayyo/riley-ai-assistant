@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-AI Command Center - Main Application
-Enhanced with crash logging
+AI Command Center - The Riley Interface
 """
 import sys
 import os
 from dotenv import load_dotenv
+load_dotenv()
 
-# CRASH LOGGING - Capture all errors
-from utils.crash_logger import setup_crash_logging
-crash_logger = setup_crash_logging()
+# Initialize crash logging FIRST
+from utils.crash_logger import CrashLogger
+crash_logger = CrashLogger()
 print("✓ Crash logging enabled - Errors will be saved to riley_crash.log")
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
