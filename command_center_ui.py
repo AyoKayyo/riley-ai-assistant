@@ -162,7 +162,10 @@ class CommandCenter(QMainWindow):
                     }
                 """)
         
-        # GOD MODE: Activate browser agent for Researcher
+        # Create new chat for this agent FIRST
+        self.new_chat()
+        
+        # GOD MODE: Activate browser agent for Researcher (AFTER clearing chat)
         if agent_name == "Researcher":
             # Lazy load browser agent (isolated, won't break Riley if it fails)
             try:
@@ -188,9 +191,6 @@ class CommandCenter(QMainWindow):
         else:
             # Reset placeholder for other agents
             self.input_field.setPlaceholderText("Message Riley...")
-        
-        # Create new chat for this agent
-        self.new_chat()
         
     def load_recent_chats(self):
         """Load recent conversations from database into sidebar"""
