@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.env.local
+
+# Database
+memory/conversations.db
+memory/conversations.db-journal
+memory/*.db
+
+# Logs
+*.log
+
+# Temporary
+*.tmp
+*.bak
+*.backup
+
+# Model cache (keep models out of repo)
+models/
+*.gguf
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Backups
+*.tar.gz
+LOAD_CONV_METHOD.txt
+agents/conversation_db.py.bak

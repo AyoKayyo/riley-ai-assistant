@@ -1,0 +1,1 @@
+❌ Gemini API error: 400 Client Error: Bad Request for url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=your_gemini_pro_key_here
