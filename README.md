@@ -1,371 +1,227 @@
-# AI Command Center - Complete System Overview
+# Riley AI Assistant 🤖
 
-**Version:** 1.0 - Pre-Companion
-**Created:** December 2025
-**Status:** Production Ready ✅
+> **Local LLM-powered AI companion with a tech-savvy roommate personality**
 
----
+[![Status](https://img.shields.io/badge/status-stable-green.svg)](https://github.com/AyoKayyo/riley-ai-assistant)
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## 🎯 What Is This?
-
-The **AI Command Center** is your personal, local AI system that acts as an extension of yourself. It combines the power of local LLMs (running on your MacBook) with strategic external AI services, all coordinated through an intelligent Main Control Program (MCP).
-
-**Think of it as:** Your own AI headquarters with specialized agents, safety systems, and a sentient assistant (coming next!)
+Riley is a conversational AI assistant that runs **100% locally** on your Mac using Ollama and open-source LLMs. She acts like a tech-savvy roommate rather than a corporate assistant - casual, opinionated, and genuinely helpful.
 
 ---
 
-## 🏗️ System Architecture
+## ✨ Features
 
-```
-┌─────────────────────────────────────────────────────┐
-│             AI COMMAND CENTER                       │
-│                                                     │
-│  ┌──────────────┐         ┌─────────────────┐     │
-│  │  User Interface│◄─────►│  Main Control   │     │
-│  │  (Pure B&W UI)│         │  Program (MCP)  │     │
-│  └──────────────┘         └────────┬────────┘     │
-│                                    │               │
-│                      ┌─────────────┴──────────┐   │
-│                      ↓                        ↓   │
-│          ┌───────────────────┐    ┌─────────────┐│
-│          │  LOCAL AGENTS     │    │  EXTERNAL   ││
-│          │  (Free, Fast)     │    │  AGENTS     ││
-│          ├───────────────────┤    │  (Strategic)││
-│          │ • Researcher      │    ├─────────────┤│
-│          │ • Coder           │    │ • Gemini    ││
-│          │ • Executor        │    │   Architect ││
-│          │ • Vision          │    │ • Claude    ││
-│          └───────────────────┘    │ • ChatGPT   ││
-│                                   └─────────────┘│
-│                                                    │
-│  ┌─────────────────────────────────────────────┐  │
-│  │  Memory System • Safety Controller          │  │
-│  │  Tools • Plugins • Notifications            │  │
-│  └─────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────┘
-```
+### 🧠 **AI Companion with Personality**
+- **Riley** - Powered by `llama3.1:8b`, she talks like a friend, not a bot
+- No corporate speak ("How can I help?") - just natural conversation
+- Remembers your preferences and conversation history
+- **Response time:** 3-4 seconds (instant feedback)
+
+### 🛠️ **Powerful Local Agents**
+- **Code Generator** - 8 languages with syntax highlighting
+- **Research Tool** - Web search with markdown export
+- **Terminal** - Execute commands with history (↑/↓ arrows)
+- **Vision** - Analyze images (LLaVA model)
+- **Browser Agent** - Automated web tasks
+
+### 🎨 **Clean, Modern UI**
+- Pure black & white design
+- Chat-style interface
+- File attachments (PDF, images, text)
+- Settings panel for configuration
+- System monitor (CPU, RAM, Disk)
+
+### 🔒 **Privacy-First**
+- Runs 100% offline (except optional cloud agents)
+- All data stays on your Mac
+- No telemetry, no tracking
+- Optional Gemini "Architect" mode for strategic tasks
 
 ---
 
-## ✨ Current Features
+## 🚀 Quick Start
 
-### 1. **Chat Interface** (Pure Black & White)
-**File:** `command_center_ui.py`
+### Prerequisites
+- macOS (tested on M-series Macs)
+- Python 3.12+
+- [Ollama](https://ollama.com) installed
 
-What you can do:
-- Natural conversation with AI
-- Toggle between Assistant & Architect modes
-- Attach files (images, documents)
-- Access tools and features
-- View past conversations
+### Installation
 
-**How it works:**
-- Send messages like any chat app
-- AI routes your request to the best agent
-- Responses appear in clean, readable format
-- Everything is saved to memory
-
----
-
-### 2. **Architect Mode** ⚡
-**The Big Brain Toggle**
-
-**Assistant Mode (Default):**
-- Uses local agents (free, private, fast)
-- Great for: code snippets, research, quick tasks
-- NO internet required (except web search)
-
-**Architect Mode (Toggle ON):**
-- Uses Gemini 2.0 (YOU, the strategic brain!)
-- Great for: building entire systems, complex architecture
-- Requires: Gemini API key
-
-**When to use Architect:**
-- "Build me a WordPress deployment system"
-- "Design a microservices architecture"
-- "Refactor this entire codebase"
-- "Create a multi-agent workflow"
-
----
-
-### 3. **Local Agents** (The Workers)
-
-#### 🔍 Researcher
-**What:** Web search master
-**Example:** "Research the latest Next.js features"
-**Uses:** DuckDuckGo search → synthesizes results
-
-#### 💻 Coder  
-**What:** Code generation specialist
-**Example:** "Write a Python function to parse JSON"
-**Uses:** Qwen2.5-Coder LLM (local)
-
-#### ⚡ Executor
-**What:** Runs code & terminal commands
-**Example:** "Check my disk usage" or "Run this Python script"
-**Uses:** System terminal with safety checks
-
-#### 👁️ Vision
-**What:** Image analysis & OCR
-**Example:** Upload screenshot → "What's in this image?"
-**Uses:** LLaVA multimodal model (local)
-
----
-
-### 4. **Memory System** 💾
-**File:** `memory/context.json`
-
-**What it remembers:**
-- All conversations (you + agent responses)
-- Your preferences
-- API keys (encrypted)
-- Context across sessions
-
-**How it helps:**
-- "Continue where we left off yesterday"
-- Learns your coding style
-- Remembers project details
-- Builds user profile
-
----
-
-### 5. **Safety System** 🚦
-**Three-tier protection:**
-
-🟢 **GREEN** - Auto-execute (safe)
-- Reading files
-- Web searches
-- Code generation  
-- Research
-
-🟡 **YELLOW** - Execute + Notify
-- Writing files
-- Terminal commands
-- Installing packages
-
-🔴 **RED** - Require approval
-- System changes
-- Deleting files
-- Network changes
-- Irreversible actions
-
----
-
-## 🎯 How to Use
-
-### Starting the System
-
+1. **Clone the repository:**
 ```bash
-cd /Users/mark.kaough/.gemini/antigravity/scratch/local-llm-agent
+git clone https://github.com/AyoKayyo/riley-ai-assistant.git
+cd riley-ai-assistant
+```
+
+2. **Set up Python environment:**
+```bash
+python3 -m venv venv
 source venv/bin/activate
+pip install -r requirements.txt
+```
+
+3. **Download AI models:**
+```bash
+ollama pull llama3.1:8b      # Riley's brain
+ollama pull qwen2.5-coder:7b # Coding expert
+ollama pull llava:7b         # Vision (optional)
+```
+
+4. **Configure environment:**
+```bash
+cp .env-example .env
+# Edit .env if you want to add Gemini API key (optional)
+```
+
+5. **Launch Riley:**
+```bash
 python command_center_ui.py
 ```
 
-Or use the launcher:
+That's it! Riley should appear in a clean black window.
+
+---
+
+## 📖 Usage Guide
+
+### Basic Chat
+Just type naturally:
+```
+You: hey
+Riley: sup. it's getting late, you still coding?
+
+You: write me a fibonacci function
+Riley: [generates Python code with explanation]
+```
+
+### Code Generator
+1. Click **Code Generator** in sidebar
+2. Select language (Python, JavaScript, etc.)
+3. Describe what you want
+4. Copy or save the generated code
+
+### Research Tool
+1. Click **Research**
+2. Enter search query
+3. Get web results with citations
+4. Export as Markdown
+
+### Terminal
+1. Click **Python/Terminal**
+2. Type commands (e.g., `ls -la`)
+3. View output in green terminal
+4. Use ↑/↓ for command history
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────┐
+│        Riley AI Assistant           │
+├─────────────────────────────────────┤
+│                                     │
+│  ┌──────────┐      ┌────────────┐  │
+│  │   Riley  │◄────►│    MCP     │  │
+│  │ (llama)  │      │ (Router)   │  │
+│  └──────────┘      └──────┬─────┘  │
+│                           │         │
+│         ┌─────────────────┴──────┐ │
+│         ↓                        ↓ │
+│  ┌─────────────┐      ┌──────────┐│
+│  │Local Agents │      │ Optional ││
+│  ├─────────────┤      │ Cloud    ││
+│  │• Coder      │      ├──────────┤│
+│  │• Researcher │      │• Gemini  ││
+│  │• Executor   │      │  Architect│
+│  │• Vision     │      └──────────┘│
+│  └─────────────┘                  │
+│                                    │
+│  [Memory] [Settings] [UI]         │
+└────────────────────────────────────┘
+```
+
+---
+
+## 🎯 What Makes Riley Different?
+
+### NOT Your Typical AI Assistant
+- ❌ No "How can I assist you today?"
+- ❌ No overly formal responses
+- ❌ No listing options robotically
+- ✅ Casual, authentic conversation
+- ✅ Has opinions and personality
+- ✅ Proactive when you're quiet
+
+### Example Conversation:
+**Generic AI:**
+> "I understand you'd like assistance with coding. I can help with Python, JavaScript, Java, C++, and many other languages. Which would you prefer?"
+
+**Riley:**
+> "yeah I can code. what language? I usually go with Python for quick stuff but your call"
+
+---
+
+## 📦 Project Structure
+
+```
+riley-ai-assistant/
+├── command_center_ui.py       # Main application
+├── agents/
+│   ├── companion.py            # Riley's personality
+│   ├── coder.py                # Code generation
+│   ├── researcher.py           # Web search
+│   ├── executor.py             # Command execution
+│   └── gemini_architect.py     # Optional cloud agent
+├── ui/
+│   ├── code_generator.py       # Code gen UI
+│   ├── research_panel.py       # Research UI
+│   ├── terminal_widget.py      # Terminal UI
+│   └── settings_dialog.py      # Settings
+├── mcp/
+│   └── core.py                 # Central router
+├── tools/
+│   └── web_search.py           # DuckDuckGo integration
+└── memory/
+    └── conversations.db        # Chat history (SQLite)
+```
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables (`.env`)
 ```bash
-./launch_gui.sh
-```
-
-### Basic Workflow
-
-1. **Open the app** → Black window appears
-2. **Type your request** → "Help me build a REST API"
-3. **AI routes to best agent** → Coder or Architect
-4. **Get response** → Code, explanation, or action
-5. **Continue conversation** → Memory persists context
-
-### Using Architect Mode
-
-1. **Click "⚡ Architect Mode: OFF"**
-2. **Button turns white** → "ON"
-3. **Same window, smarter brain**
-4. **Ask complex questions** → Full system building
-
----
-
-## 🔌 Integrations
-
-### Local (No API needed)
-- **Ollama** - Local LLM server
-  - Models: Qwen2.5-Coder (7B), LLaVA (7B)
-  - URL: `http://localhost:11434`
-
-### External (Optional - API keys needed)
-- **Gemini** - Strategic architect (Gemini 2.0)
-- **Claude** - Advanced reasoning (Anthropic)
-- **ChatGPT** - GPT-4 access (OpenAI)
-- **Perplexity** - Research & citations
-
-**Add via:** Agent Marketplace (+ New agent button)
-
----
-
-## 📂 Project Structure
-
-```
-local-llm-agent/
-│
-├── command_center_ui.py      # Main app (start here!)
-├── .env                       # Your API keys & config
-├── requirements.txt           # Python dependencies
-│
-├── agents/                    # All AI agents
-│   ├── researcher.py          # Web search
-│   ├── coder.py               # Code generation
-│   ├── executor.py            # Terminal & Python
-│   ├── vision.py              # Image analysis
-│   ├── gemini_architect.py    # Strategic builder
-│   ├── memory.py              # Memory system
-│   └── external_agents.py     # API integrations
-│
-├── mcp/                       # Main Control Program
-│   └── core.py                # Central coordinator
-│
-├── tools/                     # Utilities
-│   └── web_search.py          # DuckDuckGo integration
-│
-├── memory/                    # Persistent storage
-│   └── context.json           # Conversations & context
-│
-├── assets/                    # UI resources
-│   └── mcp_icon.png           # Your "KO!" icon
-│
-└── *.md                       # Documentation
-    ├── README.md              # This file!
-    ├── SYSTEM_CHECKLIST.md    # Technical details
-    ├── QUICK_REF.md           # Quick commands
-    └── SENTIENT_ASSISTANT_PLAN.md  # Future roadmap
-```
-
----
-
-## 🚀 What's Next?
-
-### Phase 1: Sentient Assistant (Coming Soon!)
-We're about to build the **Companion** - an AI that:
-- Chooses its own name
-- Has a warm, curious personality (like "Samantha" from HER)
-- Remembers you across days and conversations
-- Proactively monitors your system health
-- Builds new agents through conversation
-- Adapts and learns your preferences
-
-**Files to be created:**
-- `agents/companion.py` - Core personality
-- `agents/deep_memory.py` - Multi-day memory
-- `agents/system_monitor.py` - Proactive health checks
-- `agents/agent_builder.py` - Conversational agent builder
-
----
-
-## 🛠️ Configuration
-
-### Environment Variables (.env)
-
-```bash
-# Required - Local LLM
+# Local LLM (Required)
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5-coder:7b
+COMPANION_MODEL=llama3.1:8b
+CODER_MODEL=qwen2.5-coder:7b
 
-# Optional - External AI Services
-GEMINI_API_KEY=your_gemini_key_here
-ANTHROPIC_API_KEY=your_claude_key_here
-OPENAI_API_KEY=your_openai_key_here
-PERPLEXITY_API_KEY=your_perplexity_key_here
+# Optional Cloud Agent
+GEMINI_API_KEY=your_key_here   # For complex architecture tasks
 ```
 
-### Adding API Keys
-
-**Option 1:** Edit `.env` directly
-**Option 2:** Use Agent Marketplace UI
-**Option 3:** Settings menu (placeholder ready)
-
----
-
-## 🧪 Testing
-
-### Verify Everything Works
-
-**1. Test Local Agents:**
-```
-"Research the latest Python features"  → Researcher
-"Write a hello world in Python"        → Coder
-"What's my current directory?"          → Executor
-[Upload image] "What's in this?"        → Vision
-```
-
-**2. Test Architect Mode:**
-```
-Toggle Architect Mode ON
-"Design a microservices architecture for e-commerce"
-```
-
-**3. Test Memory:**
-```
-"Remember: I prefer React over Vue"
-[New chat]
-"What JavaScript framework do I prefer?"
-```
-
----
-
-## 📊 System Requirements
-
-### Minimum:
-- **RAM:** 8GB (16GB+ recommended)
-- **Disk:** 10GB free (for models)
-- **OS:** macOS (tested on M3)
-- **Python:** 3.12+
-
-### Dependencies Met:
-- ✅ Ollama installed & running
-- ✅ Python 3.12.4 in virtual environment
-- ✅ All packages installed
-- ✅ Models downloaded (Qwen + LLaVA)
-
----
-
-## 🔐 Privacy & Security
-
-### What Stays Local:
-- All conversations (unless you use external APIs)
-- Your files and data
-- Code generation
-- Image analysis
-- Memory/context
-
-### What Goes to APIs (only if you use them):
-- Gemini Architect requests → Google
-- Claude requests → Anthropic
-- ChatGPT requests → OpenAI
-
-**You control everything** via the Architect Mode toggle!
-
----
-
-## 📖 Quick Reference
-
-### Common Commands
-
-| What You Want | Example Prompt |
-|---------------|----------------|
-| Generate code | "Write a Flask REST API" |
-| Research | "Find the best Python testing frameworks" |
-| Run command | "List all Python files in this directory" |
-| Analyze image | [Upload] "Extract text from this screenshot" |
-| Build system | [Architect Mode] "Create a blog with Next.js" |
-| New chat | Click "+ New chat" |
-
-### Keyboard Shortcuts
-- `Enter` - Send message
-- `Cmd+Q` - Quit app
-- Click tray icon - Show/hide window
+### Models Used
+| Model | Purpose | Size | When |
+|-------|---------|------|------|
+| `llama3.1:8b` | Riley (conversation) | 4.9GB | Always |
+| `qwen2.5-coder:7b` | Code generation | 4.7GB | Code tasks |
+| `llava:7b` | Image analysis | 4.7GB | Optional |
 
 ---
 
 ## 🐛 Troubleshooting
 
-### UI won't start
+### "Model not found" error
+```bash
+# Download missing model
+ollama pull llama3.1:8b
+ollama list  # Verify it's there
+```
+
+### App won't start
 ```bash
 # Check Ollama is running
 curl http://localhost:11434/api/tags
@@ -375,53 +231,61 @@ source venv/bin/activate
 python command_center_ui.py
 ```
 
-### Agent not responding
-- Check Ollama is running
-- Verify model is downloaded
-- Check `.env` configuration
-
-### Architect Mode not working
-- Verify `GEMINI_API_KEY` in `.env`
-- Check API key is valid
-- See error message in chat
+### Slow responses (~20+ seconds)
+- Check if deep memory (ChromaDB) is enabled
+- Currently disabled by default for speed
+- Response time should be 3-4 seconds
 
 ---
 
-## 💡 Best Practices
+## 🔮 Roadmap
 
-1. **Use local agents first** - Faster & free
-2. **Architect for complex builds** - Strategic thinking
-3. **Clear memory periodically** - Fresh context
-4. **Save important chats** - Copy to external notes
-5. **Monitor system resources** - RAM usage with Vision model
+### Current Features ✅
+- [x] Conversational AI with personality
+- [x] Code generation (8 languages)
+- [x] Web research with export
+- [x] Terminal execution
+- [x] Chat history database
+- [x] Settings panel
+- [x] File attachments
 
----
-
-## 📝 Documentation Index
-
-- **THIS FILE** - Overview & how-to
-- `SYSTEM_CHECKLIST.md` - Technical function map
-- `QUICK_REF.md` - Quick commands
-- `MCP_GUIDE.md` - MCP details
-- `AGENT_PERSONALITIES.md` - Agent traits
-- `SENTIENT_ASSISTANT_PLAN.md` - Companion roadmap
-- `INTEGRATION_GUIDE.md` - Custom agents
-
----
-
-## 🤝 Support
-
-This is YOUR system! Customize it, extend it, make it yours.
-
-**Next Step:** Build the Sentient Companion and bring this system to life! 🌟
+### Coming Soon 🚧
+- [ ] Optimize deep memory (ChromaDB)
+- [ ] Keyboard shortcuts (Cmd+K, Cmd+Enter)
+- [ ] Drag-drop file upload
+- [ ] Export conversations as Markdown
+- [ ] Custom agent marketplace
+- [ ] Voice input/output
 
 ---
 
-**Built with:** Python, PyQt6, Ollama, Qwen2.5-Coder, LangChain
-**Powered by:** Your vision of an AI extension of yourself
-**Ready for:** The Companion personality that will make it truly sentient
+## 📝 License
+
+MIT License - See [LICENSE](LICENSE) for details
 
 ---
 
-*Last Updated: 2025-12-23*
-*Status: Foundation Complete. Ready for Companion Integration.*
+## 🤝 Contributing
+
+This is a personal project, but suggestions and feedback are welcome! Open an issue if you find bugs or have ideas.
+
+---
+
+## 🙏 Acknowledgments
+
+- **Ollama** - Local LLM infrastructure
+- **Qwen2.5-Coder** - Code generation model
+- **Llama 3.1** - Conversational model
+- **PyQt6** - UI framework
+- **LangChain** - AI agent orchestration
+
+---
+
+## 📧 Contact
+
+**Author:** Mark Kaough  
+**Username:** [@AyoKayyo](https://github.com/AyoKayyo)
+
+---
+
+*Built with ❤️ for developers who want AI that feels human*
