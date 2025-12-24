@@ -21,18 +21,44 @@ class MessageWidget(QFrame):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(4)
         
-        # Horizontal layout for text + copy button
-        h_layout = QHBoxLayout()
-        h_layout.setSpacing(8)
+        # Text content with copy button
+        text_container = QHBoxLayout()
+        text_container.setContentsMargins(0, 0, 0, 0)
+        text_container.setSpacing(8)
         
         self.text_label = QLabel()
         self.text_label.setWordWrap(True)
         self.text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        h_layout.addWidget(self.text_label, 1)  # Stretch factor 1
         
-        # Copy button (initially hidden, shows on hover)
+        # TEAM A: Premium Typography with Line-Height
+        if is_user:
+            # User bubbles: clean and direct
+            self.text_label.setText(text)
+            self.text_label.setStyleSheet("""
+                QLabel {
+                    color: #ffffff;
+                    font-family: 'Segoe UI', 'Inter', -apple-system, sans-serif;
+                    font-size: 14px;
+                    font-weight: 500;
+                    padding: 0px;
+                }
+            """)
+        else:
+            # AI bubbles: premium line-height via HTML
+            html_text = f"<div style='line-height: 160%; font-family: \"Segoe UI\", \"Inter\", -apple-system, sans-serif; font-size: 16px; color: #e3e3e3;'>{text}</div>"
+            self.text_label.setText(html_text)
+            self.text_label.setStyleSheet("""
+                QLabel {
+                    padding: 0px;
+                }
+            """)
+        
+        # Copy button (appears on hover)
         self.copy_btn = QPushButton("📋")
-        self.copy_btn.setFixedSize(32, 32)
+        self.copy_btn.setFixedSize(24, 24)
+        self.copy_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.copy_btn.setVisible(False)  # Hidden by default
+        self.copy_btn.clicked.connect(self.copy_to_clipboard)
         self.copy_btn.setStyleSheet("""
             QPushButton {
                 background-color: #2b2d31;
@@ -45,30 +71,6 @@ class MessageWidget(QFrame):
                 background-color: #3b3d41;
             }
         """)
-        self.copy_btn.clicked.connect(self.copy_to_clipboard)
-        self.copy_btn.hide()  # Hidden by default
-        h_layout.addWidget(self.copy_btn)
-        
-        main_layout.addLayout(h_layout)
-        self.layout = main_layout  # Keep reference for compatibility
-        
-        if is_user:
-            # User Bubble: Grey layered effect, rounded
-            self.text_label.setText(text)
-            self.text_label.setObjectName("UserBubble")
-            self.text_label.setStyleSheet("""
-                QLabel#UserBubble {
-                    background-color: #2b2d31;
-                    color: #e3e3e3;
-                    border-radius: 20px;
-                    padding: 14px 22px;
-                    font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-                    font-size: 14px;
-                    font-weight: 500;
-                }
-            """)
-        else:
-            # AI Response: HTML with line-height control (160%)
             html_text = f"<div style='line-height: 160%;'>{text}</div>"
             self.text_label.setText(html_text)
             self.text_label.setObjectName("AIBubble")
@@ -143,44 +145,49 @@ class ChatThread(QScrollArea):
                 background-color: transparent;
             }
             QScrollBar:vertical {
-                width: 0px;  /* Hide scrollbar */
-            }
         """)
         
         self.container = QWidget()
         self.container.setObjectName("ThreadContainer")
-        self.thread_layout = QVBoxLayout(self.container)
-        
-        # CENTERED LAYOUT - Gemini style
-        self.thread_layout.setContentsMargins(100, 30, 100, 30)  # Larger side margins to center content
-        self.thread_layout.setSpacing(24)  # Tighter spacing
-        self.thread_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter) # Center align the column
+        # TEAM A: Premium Layout - Centered with breathable gutters
+        self.layout = QVBoxLayout(self.container)
+        self.layout.setContentsMargins(60, 20, 60, 20)  # Gemini-style centered gutters
+        self.layout.setSpacing(32)  # Clear vertical separation
+        self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         self.setWidget(self.container)
-
+        
+        # TEAM A: Hide scrollbar completely for premium feel
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
     def add_message(self, text, is_user=True):
-        """Add a message to the thread"""
+        """Add a new message to the thread"""
         wrapper = QHBoxLayout()
+        wrapper.setContentsMargins(0, 0, 0, 0)
+        wrapper.setSpacing(0)
+        
         bubble = MessageWidget(text, is_user)
         bubble.setMaximumWidth(820)  # Gemini standard
-
+        
         if is_user:
-            wrapper.addStretch()  # Push to right
+            wrapper.addStretch()
             wrapper.addWidget(bubble)
         else:
             wrapper.addWidget(bubble)
-            wrapper.addStretch()  # Push to left
+            wrapper.addStretch()
         
-        self.thread_layout.addLayout(wrapper)
+        self.layout.addLayout(wrapper)
         
-        # Improved auto-scroll with delay to ensure layout is complete
+        # TEAM A: Smooth delayed auto-scroll
         QTimer.singleShot(50, self.scroll_to_bottom)
         
         return bubble
-
+    
     def scroll_to_bottom(self):
-        """Force scroll to bottom"""
-        self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
+        """Smoothly scroll to the bottom"""
+        scrollbar = self.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
     
     def clear(self):
         """Clear all messages"""
