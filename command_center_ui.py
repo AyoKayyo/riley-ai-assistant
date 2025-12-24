@@ -552,58 +552,127 @@ class CommandCenter(QMainWindow):
         self.chat_display.add_message(message, is_user=is_user)
     
     def send_message(self):
-        # FIX 4: Input validation
+        """Send message to the currently active gem's agent"""
         message = self.input_field.text().strip()
         if not message:
             return
         
-        # Prepend attachment context if exists
-        full_message = message
-        if hasattr(self, 'pending_attachments') and self.pending_attachments:
-            context_parts = []
-            for attachment in self.pending_attachments:
-                context_parts.append(f"[Attached File: {attachment['filename']}]\n{attachment['content']}\n")
-            
-            full_message = "\n".join(context_parts) + f"\n\nUser Message: {message}"
-            
-            # Clear attachments after sending
-            self.pending_attachments = []
-            self.input_field.setPlaceholderText("Send a message...")
-        
-        message = self.input_field.text().strip()
-        if not message:
-            return
-
-        # 1. UI: Display User Message immediately
-        self.add_message("You", message)
+        # 1. Display user message in current gem's chat
+        self.chat_display.add_message(message, is_user=True)
         self.input_field.clear()
         
-        # 2. LOGIC: Check Architect Mode Toggle
-        # If ON, we wrap the prompt to force the Gemini Architect route
-        if self.architect_mode:
-            print("🏗️ ARCHITECT MODE ACTIVE: Routing to Gemini 1.5 Pro")
-            # Visual cue for user
-            self.current_ai_bubble = self.chat_display.add_message("🏗️ *Calling the Architect...*", is_user=False)
-            full_prompt = f"[SYSTEM: ARCHITECT MODE ACTIVE. IGNORE LOCAL TOOLS. ROUTE THIS REQUEST TO GEMINI ARCHITECT IMMEDIATELY.]\n\n{message}"
-        else:
-            full_prompt = message
-            self.current_ai_bubble = self.chat_display.add_message("...", is_user=False)
-
-        # 3. DB: Save to history
+        # 2. Save to database with correct agent context
         if self.conversation_db:
-            self.conversation_db.add_message(self.current_conversation_id, "user", message)
-
-        # 4. STREAM: Start the worker
+            self.conversation_db.add_message(
+                self.current_conversation_id, 
+                "user", 
+                message
+            )
+        
+        # 3. Route based on active gem
+        current_gem = getattr(self, 'current_gem', 'Riley')
+        
+        # Disable input while processing
         self.input_field.setEnabled(False)
-        self.input_field.setPlaceholderText("Riley is thinking...")
+        self.input_field.setPlaceholderText(f"{current_gem} is thinking...")
+        
+        if current_gem == "Riley":
+            # Direct Riley chat - she handles orchestration
+            self._send_to_riley(message)
+            
+        elif current_gem == "Architect":
+            # Direct Architect access (Gemini)
+            self._send_to_architect(message)
+            
+        elif current_gem == "Coder":
+            # Direct Coder access
+            self._send_to_coder(message)
+            
+        elif current_gem == "Researcher":
+            # Direct Researcher access
+            self._send_to_researcher(message)
+            
+        elif current_gem == "Terminal":
+            # Direct Executor access
+            self._send_to_executor(message)
+        
+        else:
+            # Fallback to Riley
+            self._send_to_riley(message)
+    
+    def _send_to_riley(self, message):
+        """Send message to Riley (Companion) - she orchestrates"""
+        self.current_ai_bubble = self.chat_display.add_message("...", is_user=False)
         
         from ui.stream_worker import StreamWorker
-        self.stream_worker = StreamWorker(self.companion, full_prompt)
+        self.stream_worker = StreamWorker(self.companion, message)
         self.stream_worker.token_received.connect(self.update_streaming_response)
         self.stream_worker.finished.connect(self.finish_response)
         self.stream_worker.start()
+    
+    def _send_to_architect(self, message):
+        """Send message directly to Gemini Architect"""
+        self.current_ai_bubble = self.chat_display.add_message("🏗️ Architect thinking...", is_user=False)
         
+        # Use architect agent directly
+        from ui.stream_worker import StreamWorker
+        self.stream_worker = StreamWorker(self.architect, message)
+        self.stream_worker.token_received.connect(self.update_streaming_response)
+        self.stream_worker.finished.connect(self.finish_response)
         self.stream_worker.start()
+    
+    def _send_to_coder(self, message):
+        """Send message directly to Coder agent"""
+        self.current_ai_bubble = self.chat_display.add_message("💻 Coding...", is_user=False)
+        
+        try:
+            # Get coder agent from MCP
+            coder = self.mcp.agents.get('coder')
+            if coder:
+                response = coder.execute(message)
+                self.current_ai_bubble.update_typed_text(response)
+                self.finish_response()
+            else:
+                self.current_ai_bubble.update_typed_text("❌ Coder agent not available")
+                self.finish_response()
+        except Exception as e:
+            self.current_ai_bubble.update_typed_text(f"❌ Error: {str(e)}")
+            self.finish_response()
+    
+    def _send_to_researcher(self, message):
+        """Send message directly to Researcher agent"""
+        self.current_ai_bubble = self.chat_display.add_message("🔍 Researching...", is_user=False)
+        
+        try:
+            researcher = self.mcp.agents.get('researcher')
+            if researcher:
+                response = researcher.execute(message)
+                self.current_ai_bubble.update_typed_text(response)
+                self.finish_response()
+            else:
+                self.current_ai_bubble.update_typed_text("❌ Researcher agent not available")
+                self.finish_response()
+        except Exception as e:
+            self.current_ai_bubble.update_typed_text(f"❌ Error: {str(e)}")
+            self.finish_response()
+    
+    def _send_to_executor(self, message):
+        """Send message directly to Executor agent"""
+        self.current_ai_bubble = self.chat_display.add_message("⚡ Executing...", is_user=False)
+        
+        try:
+            executor = self.mcp.agents.get('executor')
+            if executor:
+                response = executor.execute(message)
+                self.current_ai_bubble.update_typed_text(response)
+                self.finish_response()
+            else:
+                self.current_ai_bubble.update_typed_text("❌ Executor agent not available")
+                self.finish_response()
+        except Exception as e:
+            self.current_ai_bubble.update_typed_text(f"❌ Error: {str(e)}")
+            self.finish_response()
+
     
     def on_backend_stream_finished(self, final_text):
         """Backend is done, tell animator to wrap up"""
@@ -616,11 +685,21 @@ class CommandCenter(QMainWindow):
             self.current_ai_bubble.update_typed_text(text)
             self.chat_display.scroll_to_bottom()
     
-    def finish_response(self):
-        """Animation complete"""
+    def finish_response(self, final_text=None):
+        """Called when agent response is complete"""
+        # Save to database if we have text
+        if final_text and self.conversation_db:
+            self.conversation_db.add_message(
+                self.current_conversation_id,
+                "assistant",
+                final_text
+            )
+        
+        # Re-enable input
         self.input_field.setEnabled(True)
         self.input_field.setPlaceholderText("Send a message...")
         self.input_field.setFocus()
+
         self.current_ai_bubble = None
         self.typing_animator = None
     
