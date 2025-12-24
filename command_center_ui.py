@@ -249,7 +249,6 @@ class CommandCenter(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        sidebar = self.create_sidebar()
         sidebar = self.build_sidebar()
         main_layout.addWidget(sidebar)
         
