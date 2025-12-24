@@ -484,35 +484,38 @@ class CommandCenter(QMainWindow):
             self.pending_attachments = []
             self.input_field.setPlaceholderText("Send a message...")
         
+        message = self.input_field.text().strip()
+        if not message:
+            return
+
+        # 1. UI: Display User Message immediately
         self.add_message("You", message)
         self.input_field.clear()
         
-        # Save user message to DB
-        self.conversation_db.add_message(self.current_conversation_id, "user", message)
-        
-        # FIX 3: Show loading state
+        # 2. LOGIC: Check Architect Mode Toggle
+        # If ON, we wrap the prompt to force the Gemini Architect route
+        if self.architect_mode:
+            print("🏗️ ARCHITECT MODE ACTIVE: Routing to Gemini 1.5 Pro")
+            # Visual cue for user
+            self.current_ai_bubble = self.chat_display.add_message("🏗️ *Calling the Architect...*", is_user=False)
+            full_prompt = f"[SYSTEM: ARCHITECT MODE ACTIVE. IGNORE LOCAL TOOLS. ROUTE THIS REQUEST TO GEMINI ARCHITECT IMMEDIATELY.]\n\n{message}"
+        else:
+            full_prompt = message
+            self.current_ai_bubble = self.chat_display.add_message("...", is_user=False)
+
+        # 3. DB: Save to history
+        if self.conversation_db:
+            self.conversation_db.add_message(self.current_conversation_id, "user", message)
+
+        # 4. STREAM: Start the worker
         self.input_field.setEnabled(False)
-        self.input_field.setPlaceholderText("Thinking...")
+        self.input_field.setPlaceholderText("Riley is thinking...")
         
-        # Add placeholder AI message for streaming
-        self.current_ai_bubble = self.chat_display.add_message("...", is_user=False)
-        
-        # Start streaming worker (Backend)
         from ui.stream_worker import StreamWorker
-        self.stream_worker = StreamWorker(self.companion, message)
-        
-        # Start typing animator (Frontend)
-        from ui.typing_animator import TypingWorker
-        self.typing_animator = TypingWorker()
-        
-        # Connect: StreamWorker (Data) -> TypingWorker (Buffer)
-        self.stream_worker.token_received.connect(self.typing_animator.update_buffer)
-        self.stream_worker.finished.connect(self.on_backend_stream_finished)
-        self.stream_worker.error.connect(self.handle_error)
-        
-        # Connect: TypingWorker (Buffer) -> UI (Display)
-        self.typing_animator.char_typed.connect(self.update_streaming_response)
-        self.typing_animator.finished.connect(self.finish_response)
+        self.stream_worker = StreamWorker(self.companion, full_prompt)
+        self.stream_worker.chunk_received.connect(self.handle_chunk)
+        self.stream_worker.finished.connect(self.handle_stream_finished)
+        self.stream_worker.start()
         
         self.stream_worker.start()
     
