@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """
-AI Command Center - STABLE FOUNDATION
-Pure B&W, all features working, ready for companion
+AI Command Center - Main Application
+Enhanced with crash logging
 """
-import os
 import sys
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                              QTextEdit, QLineEdit, QPushButton, QSystemTrayIcon, QMenu,
-                              QLabel, QFrame, QMessageBox, QFileDialog)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
-from PyQt6.QtGui import QIcon, QFont, QTextCursor, QPalette, QColor, QPixmap, QPainter, QTextOption
+import os
 from dotenv import load_dotenv
+
+# CRASH LOGGING - Capture all errors
+from utils.crash_logger import setup_crash_logging
+crash_logger = setup_crash_logging()
+print("✓ Crash logging enabled - Errors will be saved to riley_crash.log")
+
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                              QHBoxLayout, QTextEdit, QLineEdit, QPushButton,
+                              QLabel, QFrame, QMessageBox, QSplitter, QScrollArea)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt6.QtGui import QIcon, QFont
 from langchain_ollama import ChatOllama
 from mcp.core import MCP
 from agents.researcher import ResearchAgent

@@ -48,3 +48,4 @@ dist/
 *.tar.gz
 LOAD_CONV_METHOD.txt
 agents/conversation_db.py.bak
+riley_crash.log
