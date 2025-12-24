@@ -427,9 +427,9 @@ class CommandCenter(QMainWindow):
         return sidebar
     
     def create_gem_button(self, agent_name, icon, display_name):
-        \"\"\"Create a styled gem button for agent selection\"\"\"
-        btn = QPushButton(f\"{icon}  {display_name}\")
-        btn.setStyleSheet(\"\"\"
+        """Create a styled gem button for agent selection"""
+        btn = QPushButton(f"{icon}  {display_name}")
+        btn.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
                 color: #cccccc;
@@ -443,18 +443,18 @@ class CommandCenter(QMainWindow):
                 background-color: #1a1a1a;
                 color: #ffffff;
             }
-        \"\"\")
+        """)
         btn.clicked.connect(lambda: self.switch_to_gem(agent_name))
         return btn
     
     def switch_to_gem(self, agent_name):
-        \"\"\"Switch to a different agent and create a new chat\"\"\"
+        """Switch to a different agent and create a new chat"""
         self.current_agent = agent_name
         
         # Highlight active gem
         for name, btn in self.gem_buttons.items():
             if name == agent_name:
-                btn.setStyleSheet(\"\"\"
+                btn.setStyleSheet("""
                     QPushButton {
                         background-color: #2a2a2a;
                         color: #ffffff;
@@ -464,9 +464,9 @@ class CommandCenter(QMainWindow):
                         text-align: left;
                         font-size: 13px;
                     }
-                \"\"\")
+                """)
             else:
-                btn.setStyleSheet(\"\"\"
+                btn.setStyleSheet("""
                     QPushButton {
                         background-color: transparent;
                         color: #cccccc;
@@ -480,12 +480,12 @@ class CommandCenter(QMainWindow):
                         background-color: #1a1a1a;
                         color: #ffffff;
                     }
-                \"\"\")
+                """)
         
         # Create new conversation for this agent
         if self.conversation_db:
             self.current_conversation_id = self.conversation_db.create_conversation(
-                title=f\"{agent_name} Chat\",
+                title=f"{agent_name} Chat",
                 agent_name=agent_name
             )
         
@@ -493,10 +493,10 @@ class CommandCenter(QMainWindow):
         self.chat_display.clear()
     
     def new_chat(self):
-        \"\"\"Create a new chat for the currently selected agent\"\"\"
+        """Create a new chat for the currently selected agent"""
         if self.conversation_db:
             self.current_conversation_id = self.conversation_db.create_conversation(
-                title=f\"{self.current_agent} Chat\",
+                title=f"{self.current_agent} Chat",
                 agent_name=self.current_agent
             )
         self.chat_display.clear()
