@@ -71,19 +71,11 @@ class MessageWidget(QFrame):
                 background-color: #3b3d41;
             }
         """)
-            html_text = f"<div style='line-height: 160%;'>{text}</div>"
-            self.text_label.setText(html_text)
-            self.text_label.setObjectName("AIBubble")
-            self.text_label.setStyleSheet("""
-                QLabel#AIBubble {
-                    background-color: transparent;
-                    color: #e3e3e3;
-                    font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-                    font-size: 15px;
-                    font-weight: 400;
-                    padding: 0px;
-                }
-            """)
+        
+        text_container.addWidget(self.text_label)
+        text_container.addWidget(self.copy_btn)
+        main_layout.addLayout(text_container)
+    
     
 
     def update_text(self, text):
