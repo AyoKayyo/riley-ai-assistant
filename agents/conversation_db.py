@@ -59,7 +59,7 @@ class ConversationDB:
     
     def create_conversation(self, title: str = None, agent_name: str = "Riley") -> int:
         if title is None:
-            title = f"Chat - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            title = f"{agent_name} - New Chat"
         cursor = self.conn.cursor()
         cursor.execute("INSERT INTO conversations (title, agent_name) VALUES (?, ?)", (title, agent_name))
         self.conn.commit()

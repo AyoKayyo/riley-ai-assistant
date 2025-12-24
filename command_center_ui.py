@@ -273,7 +273,7 @@ class CommandCenter(QMainWindow):
         
         # 1. SEARCH BAR
         search_input = QLineEdit()
-        search_input.setPlaceholderText("🔍 Search for chats")
+        search_input.setPlaceholderText("Search for chats")
         search_input.setStyleSheet("""
             QLineEdit {
                 background-color: #1a1a1a;
@@ -292,7 +292,7 @@ class CommandCenter(QMainWindow):
         layout.addSpacing(10)
         
         # 2. NEW CHAT BUTTON
-        new_chat_btn = QPushButton("✏️  New chat")
+        new_chat_btn = QPushButton("New chat")
         new_chat_btn.setFont(QFont(".AppleSystemUIFont", 13))
         new_chat_btn.setStyleSheet("""
             QPushButton {
@@ -322,15 +322,15 @@ class CommandCenter(QMainWindow):
         self.gem_buttons = {}
         
         gems = [
-            ("Riley", "💎", "Riley"),
-            ("Architect", "🏗️", "Architect"),
-            ("Coder", "💻", "Coder"),
-            ("Researcher", "🔍", "Researcher"),
-            ("Terminal", "⚡", "Terminal")
+            ("Riley", "Riley"),
+            ("Architect", "Architect"),
+            ("Coder", "Coder"),
+            ("Researcher", "Researcher"),
+            ("Terminal", "Terminal")
         ]
         
-        for name, icon, agent_name in gems:
-            btn = QPushButton(f"{icon}  {name}")
+        for name, agent_name in gems:
+            btn = QPushButton(name)
             btn.setFont(QFont(".AppleSystemUIFont", 12))
             btn.setStyleSheet("""
                 QPushButton {
@@ -376,7 +376,7 @@ class CommandCenter(QMainWindow):
         separator.setStyleSheet("background-color: #1a1a1a; margin: 8px 0;")
         layout.addWidget(separator)
         
-        settings_btn = QPushButton("⚙️  Settings & help")
+        settings_btn = QPushButton("Settings & help")
         settings_btn.setFont(QFont(".AppleSystemUIFont", 12))
         settings_btn.setStyleSheet("""
             QPushButton {
@@ -612,7 +612,7 @@ class CommandCenter(QMainWindow):
     
     def _send_to_architect(self, message):
         """Send message directly to Gemini Architect"""
-        self.current_ai_bubble = self.chat_display.add_message("🏗️ Architect thinking...", is_user=False)
+        self.current_ai_bubble = self.chat_display.add_message("Architect thinking...", is_user=False)
         
         # Use architect agent directly
         from ui.stream_worker import StreamWorker
@@ -623,7 +623,7 @@ class CommandCenter(QMainWindow):
     
     def _send_to_coder(self, message):
         """Send message directly to Coder agent"""
-        self.current_ai_bubble = self.chat_display.add_message("💻 Coding...", is_user=False)
+        self.current_ai_bubble = self.chat_display.add_message("Coding...", is_user=False)
         
         try:
             # Get coder agent from MCP
@@ -641,7 +641,7 @@ class CommandCenter(QMainWindow):
     
     def _send_to_researcher(self, message):
         """Send message directly to Researcher agent"""
-        self.current_ai_bubble = self.chat_display.add_message("🔍 Researching...", is_user=False)
+        self.current_ai_bubble = self.chat_display.add_message("Researching...", is_user=False)
         
         try:
             researcher = self.mcp.agents.get('researcher')
@@ -658,7 +658,7 @@ class CommandCenter(QMainWindow):
     
     def _send_to_executor(self, message):
         """Send message directly to Executor agent"""
-        self.current_ai_bubble = self.chat_display.add_message("⚡ Executing...", is_user=False)
+        self.current_ai_bubble = self.chat_display.add_message("Executing...", is_user=False)
         
         try:
             executor = self.mcp.agents.get('executor')
