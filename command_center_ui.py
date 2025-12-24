@@ -987,16 +987,17 @@ class CommandCenter(QMainWindow):
 
     
     def open_tools_menu(self):
+        """Show Tools Menu (3 dots)"""
+        from PyQt6.QtWidgets import QMenu
+        from PyQt6.QtGui import QCursor
+        
         menu = QMenu(self)
-        menu.setStyleSheet("""
-            QMenu {
         menu.addAction("Settings", self.open_settings)
         menu.addAction("Memory", self.open_memory)
         menu.addAction("Code Generator", self.open_code_generator)
         menu.addAction("Research", self.open_research)
         menu.addAction("Terminal", self.open_terminal)
-        menu.exec(QCursor.pos())  # Show at mouse position
-        # Actually standard QMenu usage is simpler
+        menu.exec(QCursor.pos())
     
     def open_code_generator(self):
         QMessageBox.information(self, "Code Generator", "Code generation tool")
