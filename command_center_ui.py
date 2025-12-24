@@ -14,9 +14,10 @@ print("✓ Crash logging enabled - Errors will be saved to riley_crash.log")
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                               QHBoxLayout, QTextEdit, QLineEdit, QPushButton,
-                              QLabel, QFrame, QMessageBox, QSplitter, QScrollArea)
+                              QLabel, QFrame, QMessageBox, QSplitter, QScrollArea,
+                              QSystemTrayIcon, QMenu, QFileDialog)
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
-from PyQt6.QtGui import QIcon, QFont
+from PyQt6.QtGui import QIcon, QFont, QTextCursor, QPalette, QColor, QPixmap, QPainter, QTextOption
 from langchain_ollama import ChatOllama
 from mcp.core import MCP
 from agents.researcher import ResearchAgent
