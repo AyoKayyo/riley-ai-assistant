@@ -118,6 +118,21 @@ class CommandCenter(QMainWindow):
         """Switch to a different agent/gem"""
         self.current_gem = agent_name
         
+        # CRITICAL: Stop any active streaming before clearing display
+        if hasattr(self, 'stream_worker') and self.stream_worker:
+            try:
+                self.stream_worker.stop()
+                self.stream_worker = None
+            except:
+                pass
+        
+        if hasattr(self, 'typing_worker') and self.typing_worker:
+            try:
+                self.typing_worker.stop()
+                self.typing_worker = None
+            except:
+                pass
+        
         # Highlight active gem
         for name, btn in self.gem_buttons.items():
             if name == agent_name:
