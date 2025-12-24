@@ -94,6 +94,19 @@ class CommandCenter(QMainWindow):
         self.conversation_db = ConversationDB()
         self.current_conversation_id = self.conversation_db.create_conversation()
         
+        self.agent_thread = None
+        self.current_agent = self.companion.name
+        self.architect_mode = False
+        self.first_launch = not self.memory.get("companion_name")
+        self.current_gem = "Riley"  # Track active gem
+        
+        # Health check on startup
+        self.check_ollama_connection()
+        
+        self.setup_ui()
+    
+    # === GEMINI SIDEBAR METHODS ===
+    
     def new_chat(self):
         """Create a new conversation (for current gem/agent)"""
         current_agent = getattr(self, 'current_gem', 'Riley')
@@ -187,15 +200,6 @@ class CommandCenter(QMainWindow):
         for msg in messages:
             is_user = msg['role'] == 'user'
             self.chat_display.add_message(msg['content'], is_user=is_user)
-        self.agent_thread = None
-        self.current_agent = self.companion.name  # Use Companion's chosen name
-        self.architect_mode = False
-        self.first_launch = not self.memory.get("companion_name")  # Check if first time
-        
-        # FIX 1: Health check on startup
-        self.check_ollama_connection()
-        
-        self.setup_ui()
     
     def setup_ui(self):
         self.setWindowTitle("AI Command Center")
