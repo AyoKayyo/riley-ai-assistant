@@ -6,9 +6,9 @@ load_dotenv()
 
 class GeminiArchitectAgent:
     def __init__(self):
-        # UPGRADE: Gemini Pro (Stable model - 1M context)
+        # UPGRADE: Gemini 2.5 Flash (Latest stable model - 1M context)
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-pro",  # Stable, widely available
+            model="gemini-2.5-flash",  # Fastest, newest stable model
             google_api_key=os.getenv("GEMINI_API_KEY"),
             temperature=0.3, # Low temp for precise architecture
             convert_system_message_to_human=True
