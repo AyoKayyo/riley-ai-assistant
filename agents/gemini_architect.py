@@ -23,7 +23,7 @@ class GeminiArchitectAgent:
     
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        self.model = "gemini-2.0-flash-exp"  # Latest model
+        self.model = "gemini-1.5-pro-latest"  # UPGRADE: 2M token context
         self.base_url = "https://generativelanguage.googleapis.com/v1beta"
         
         # Architect personality and capabilities
@@ -73,24 +73,6 @@ You are an extension of the user's mind for complex technical work.
             messages = [
                 {"role": "user", "parts": [{"text": self.system_prompt}]},
                 {"role": "model", "parts": [{"text": "I understand. I'm the Architect agent, ready to build complex systems with strategic thinking and full authority."}]},
-                {"role": "user", "parts": [{"text": self._build_task_prompt(task, context)}]}
-            ]
-            
-            # Call Gemini API
-            url = f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
-            
-            payload = {
-                "contents": messages[1:],  # Skip system prompt in contents
-                "generationConfig": {
-                    "temperature": 0.7,
-                    "topK": 40,
-                    "topP": 0.95,
-                    "maxOutputTokens": 8192,
-                }
-            }
-            
-            response = requests.post(url, json=payload, timeout=60)
-            response.raise_for_status()
             
             result = response.json()
             
