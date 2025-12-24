@@ -513,8 +513,8 @@ class CommandCenter(QMainWindow):
         
         from ui.stream_worker import StreamWorker
         self.stream_worker = StreamWorker(self.companion, full_prompt)
-        self.stream_worker.chunk_received.connect(self.handle_chunk)
-        self.stream_worker.finished.connect(self.handle_stream_finished)
+        self.stream_worker.token_received.connect(self.update_streaming_response)
+        self.stream_worker.finished.connect(self.finish_response)
         self.stream_worker.start()
         
         self.stream_worker.start()
