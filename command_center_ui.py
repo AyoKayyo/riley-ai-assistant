@@ -16,8 +16,8 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                               QHBoxLayout, QTextEdit, QLineEdit, QPushButton,
                               QLabel, QFrame, QMessageBox, QSplitter, QScrollArea,
                               QSystemTrayIcon, QMenu, QFileDialog)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
-from PyQt6.QtGui import QIcon, QFont, QTextCursor, QPalette, QColor, QPixmap, QPainter, QTextOption
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QUrl
+from PyQt6.QtGui import QIcon, QFont, QTextCursor, QPalette, QColor, QPixmap, QPainter, QTextOption, QDesktopServices, QAction, QCursor
 from langchain_ollama import ChatOllama
 from mcp.core import MCP
 from agents.researcher import ResearchAgent
@@ -27,6 +27,7 @@ from agents.vision import VisionAgent
 from agents.gemini_architect import GeminiArchitectAgent
 from agents.companion import CompanionAgent
 from agents.memory import MemorySystem
+from ui.chat_thread import ChatThread
 
 load_dotenv()
 
@@ -58,7 +59,27 @@ class AgentThread(QThread):
                 self.agent_name.emit(agent)
                 self.response_ready.emit(result)
         except Exception as e:
-            self.response_ready.emit(f"Error: {str(e)}")
+            self.terminate()
+        self.is_running = False
+
+
+# === BROWSER WORKER (Fix 3: Global to prevent memory leak) ===
+class BrowserWorker(QThread):
+    """Background worker for browser missions - defined globally to prevent memory leak"""
+    finished = pyqtSignal(str)
+    error = pyqtSignal(str)
+    
+    def __init__(self, browser_manager, task):
+        super().__init__()
+        self.browser_manager = browser_manager
+        self.task = task
+    
+    def run(self):
+        try:
+            result = self.browser_manager.execute_sync(self.task)
+            self.finished.emit(result)
+        except Exception as e:
+            self.error.emit(f"Browser mission failed: {str(e)}")
 
 
 class CommandCenter(QMainWindow):
@@ -101,10 +122,13 @@ class CommandCenter(QMainWindow):
         self.first_launch = not self.memory.get("companion_name")
         self.current_gem = "Riley"  # Track active gem
         
-        # Health check on startup
-        self.check_ollama_connection()
-        
         self.setup_ui()
+        
+        # Give Riley access to terminal widget (so she can execute commands)
+        self.companion.terminal_widget = self.terminal_widget
+        
+        # NON-BLOCKING health check after UI loads
+        QTimer.singleShot(1000, self.start_health_check)
     
     # === GEMINI SIDEBAR METHODS ===
     
@@ -119,20 +143,22 @@ class CommandCenter(QMainWindow):
         """Switch to a different agent/gem"""
         self.current_gem = agent_name
         
-        # CRITICAL: Stop any active streaming before clearing display
+        # CRITICAL: Disconnect signals instead of killing threads
         if hasattr(self, 'stream_worker') and self.stream_worker:
             try:
-                self.stream_worker.stop()
-                self.stream_worker = None
-            except:
-                pass
+                # Just stop listening - let thread die naturally
+                self.stream_worker.token_received.disconnect()
+                self.stream_worker.finished.disconnect()
+            except TypeError:
+                pass  # Signal already disconnected
+            self.stream_worker = None
         
         if hasattr(self, 'typing_worker') and self.typing_worker:
             try:
-                self.typing_worker.stop()
-                self.typing_worker = None
-            except:
+                self.typing_worker.finished.disconnect()
+            except TypeError:
                 pass
+            self.typing_worker = None
         
         # Highlight active gem
         for name, btn in self.gem_buttons.items():
@@ -216,6 +242,10 @@ class CommandCenter(QMainWindow):
         for msg in messages:
             is_user = msg['role'] == 'user'
             self.chat_display.add_message(msg['content'], is_user=is_user)
+        
+        # Visually select it in the sidebar
+        if hasattr(self, 'history_sidebar'):
+            self.history_sidebar.set_active(conversation_id)
     
     def setup_ui(self):
         self.setWindowTitle("AI Command Center")
@@ -333,64 +363,17 @@ class CommandCenter(QMainWindow):
         
         layout.addSpacing(8)
         
-        # === 4. ARCHITECT MODE TOGGLE (Keep existing) ===
-        self.architect_toggle = QPushButton("Architect Mode: OFF")
-        self.architect_toggle.setCheckable(True)
-        self.architect_toggle.setStyleSheet("""
-            QPushButton {
-                background-color: #1a1a1a;
-                color: #888888;
-                border: 2px solid #2a2a2a;
-                border-radius: 12px;
-                padding: 12px;
-                font-size: 13px;
-                font-weight: bold;
-            }
-            QPushButton:checked {
-                background-color: #1a3a1a;
-                color: #4ade80;
-                border: 2px solid #22c55e;
-            }
-        """)
-        self.architect_toggle.clicked.connect(self.toggle_architect_mode)
-        layout.addWidget(self.architect_toggle)
+        # === 5. CHATS SECTION (HISTORY) - UPGRADED ===
+        # Import and instantiate the new polished sidebar
+        from ui.history_sidebar import HistorySidebar
+        self.history_sidebar = HistorySidebar(self.conversation_db)
         
-        layout.addSpacing(8)
+        # Connect signals to existing methods
+        self.history_sidebar.conversation_selected.connect(self.load_conversation)
+        self.history_sidebar.new_chat_clicked.connect(self.handle_new_chat_click)
         
-        # === 5. CHATS SECTION (HISTORY) ===
-        chats_label = QLabel("Chats")
-        chats_label.setStyleSheet("color: #666666; font-size: 11px; font-weight: bold; padding: 4px 8px;")
-        layout.addWidget(chats_label)
-        
-        # Scrollable chat list
-        self.chats_scroll = QScrollArea()
-        self.chats_scroll.setWidgetResizable(True)
-        self.chats_scroll.setStyleSheet("""
-            QScrollArea {
-                border: none;
-                background-color: transparent;
-            }
-            QScrollBar:vertical {
-                width: 4px;
-                background: transparent;
-            }
-            QScrollBar::handle:vertical {
-                background: #2a2a2a;
-                border-radius: 2px;
-            }
-        """)
-        
-        self.chats_container = QWidget()
-        self.chats_layout = QVBoxLayout(self.chats_container)
-        self.chats_layout.setContentsMargins(0, 0, 0, 0)
-        self.chats_layout.setSpacing(4)
-        self.chats_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        
-        self.chats_scroll.setWidget(self.chats_container)
-        layout.addWidget(self.chats_scroll, 1)  # Give it stretch priority
-        
-        # Load recent conversations
-        self.load_recent_chats()
+        # Add to sidebar layout (replaces the old ScrollArea)
+        layout.addWidget(self.history_sidebar, 1)  # Give it stretch priority
         
         # === 6. SETTINGS BUTTON (BOTTOM) ===
         settings_btn = QPushButton("⚙️  Settings & help")
@@ -489,8 +472,26 @@ class CommandCenter(QMainWindow):
                 agent_name=agent_name
             )
         
-        # Clear chat display
+        # Clear chat for fresh context
         self.chat_display.clear()
+        
+        # TERMINAL MODE: Show terminal, hide chat
+        if agent_name == "Terminal":
+            self.chat_display.hide()
+            self.terminal_widget.show()
+            self.terminal_widget.input.setFocus()
+        else:
+            # Normal chat mode: hide terminal, show chat
+            self.terminal_widget.hide()
+            self.chat_display.show()
+            self.input_field.setFocus()
+    
+    def handle_new_chat_click(self):
+        """Wrapper to call existing new_chat and update sidebar"""
+        self.new_chat()
+        if hasattr(self, 'history_sidebar'):
+            self.history_sidebar.refresh_list()
+            self.history_sidebar.set_active(self.current_conversation_id)
     
     def new_chat(self):
         """Create a new chat for the currently selected agent"""
@@ -500,25 +501,30 @@ class CommandCenter(QMainWindow):
                 agent_name=self.current_agent
             )
         self.chat_display.clear()
-        self.load_recent_chats()  # Refresh chat list
 
     
     def create_chat_area(self):
         chat_frame = QFrame()
-        chat_frame.setStyleSheet("background-color: #000000;")
+        chat_frame.setStyleSheet("background-color: #1e1e1e;")
         
         layout = QVBoxLayout(chat_frame)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         
+        
         # MESSAGES - Use new ChatThread instead of QTextEdit
-        from ui.chat_thread import ChatThread
         self.chat_display = ChatThread()
         layout.addWidget(self.chat_display)
         
+        # TERMINAL - Embedded terminal (hidden by default)
+        from ui.terminal_widget import TerminalWidget
+        self.terminal_widget = TerminalWidget()
+        self.terminal_widget.hide()  # Hidden until Terminal gem clicked
+        layout.addWidget(self.terminal_widget)
+        
         # INPUT AREA
         input_container = QFrame()
-        input_container.setStyleSheet("background-color: #000000; border-top: 1px solid #1a1a1a;")
+        input_container.setStyleSheet("background-color: #1e1e1e; border-top: 1px solid #2a2a2a;")
         input_layout = QVBoxLayout(input_container)
         input_layout.setContentsMargins(20, 20, 20, 20)
         
@@ -561,21 +567,23 @@ class CommandCenter(QMainWindow):
         tools_btn.clicked.connect(self.open_tools_menu)
         input_row.addWidget(tools_btn)
         
-        # INPUT FIELD
+        # INPUT FIELD - Gemini/Vercel capsule style
         self.input_field = QLineEdit()
         self.input_field.setPlaceholderText("Send a message...")
-        self.input_field.setFont(QFont(".AppleSystemUIFont", 15))
+        self.input_field.setFont(QFont(".AppleSystemUIFont", 14))
         self.input_field.setMinimumHeight(45)
         self.input_field.setStyleSheet("""
             QLineEdit {
-                background-color: #1a1a1a;
-                border: 1px solid #2a2a2a;
+                background-color: #2b2d31;
+                border: 1px solid #3f4148;
                 border-radius: 22px;
                 padding: 0 20px;
-                color: #ffffff;
+                color: #ececf1;
+                font-size: 14px;
             }
             QLineEdit:focus {
-                border-color: #3a3a3a;
+                border: 1px solid #5865f2;
+                background-color: #313338;
             }
         """)
         self.input_field.returnPressed.connect(self.send_message)
@@ -626,6 +634,35 @@ class CommandCenter(QMainWindow):
             self.agent_label.setText("Assistant")
             self.add_message("System", "Assistant Mode active")
     
+    def start_health_check(self):
+        """Checks Ollama silently in background without freezing UI"""
+        from PyQt6.QtCore import QThread, pyqtSignal
+        import requests
+
+        class HealthWorker(QThread):
+            status = pyqtSignal(bool, str)
+            def run(self):
+                try:
+                    requests.get(f"{os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')}/api/tags", timeout=2)
+                    self.status.emit(True, "Online")
+                except:
+                    self.status.emit(False, "Offline")
+
+        self.health_worker = HealthWorker()
+        self.health_worker.status.connect(self.update_connection_status)
+        self.health_worker.start()
+
+    def update_connection_status(self, connected, msg):
+        """Update footer based on Ollama connection"""
+        if not connected:
+            if hasattr(self, 'footer'):
+                self.footer.setText("⚠️ Ollama Offline - Local Agents Disabled")
+                self.footer.setStyleSheet("color: #ff4444; padding: 8px;")
+        else:
+            if hasattr(self, 'footer'):
+                self.footer.setText("AI Command Center")
+                self.footer.setStyleSheet("color: #666666; padding: 8px;")
+    
     def check_ollama_connection(self):
         """FIX 1: Verify Ollama is running on startup"""
         try:
@@ -658,32 +695,13 @@ class CommandCenter(QMainWindow):
         
         # BROWSER MODE: Execute with Chrome if enabled (like ChatGPT browsing)
         if self.browser_mode_enabled and hasattr(self, 'browser_manager'):
-            # Run browser mission in background thread
-            from PyQt6.QtCore import QThread, pyqtSignal
-            
-            class BrowserWorker(QThread):
-                finished = pyqtSignal(str)
-                error = pyqtSignal(str)
-                
-                def __init__(self, browser_manager, task):
-                    super().__init__()
-                    self.browser_manager = browser_manager
-                    self.task = task
-                
-                def run(self):
-                    try:
-                        result = self.browser_manager.execute_sync(self.task)
-                        self.finished.emit(result)
-                    except Exception as e:
-                        self.error.emit(f"Browser mission failed: {str(e)}")
-            
             # Show launching message
             self.chat_display.add_message(
                 "🌎 **Launching browser...**\nA Chrome window will open.",
                 is_user=False
             )
             
-            # Start browser worker
+            # Start browser worker (using global class)
             self.browser_worker = BrowserWorker(self.browser_manager, user_input)
             self.browser_worker.finished.connect(lambda result: self.chat_display.add_message(
                 f"✅ **Browser Task Complete:**\n\n{result}",
@@ -741,7 +759,12 @@ class CommandCenter(QMainWindow):
         self.current_ai_bubble = self.chat_display.add_message("...", is_user=False)
         
         from ui.stream_worker import StreamWorker
-        self.stream_worker = StreamWorker(self.companion, message)
+        self.stream_worker = StreamWorker(
+            self.companion, 
+            message,
+            conversation_db=self.conversation_db,
+            conversation_id=self.current_conversation_id
+        )
         self.stream_worker.token_received.connect(self.update_streaming_response)
         self.stream_worker.finished.connect(self.finish_response)
         self.stream_worker.start()
@@ -817,9 +840,13 @@ class CommandCenter(QMainWindow):
     
     def update_streaming_response(self, text):
         """Update AI bubble as chars are 'typed' by animator"""
-        if self.current_ai_bubble:
-            self.current_ai_bubble.update_typed_text(text)
-            self.chat_display.scroll_to_bottom()
+        if self.current_ai_bubble and hasattr(self.current_ai_bubble, 'content'):
+            try:
+                self.current_ai_bubble.update_typed_text(text)
+                self.chat_display.scroll_to_bottom()
+            except RuntimeError:
+                # Widget was deleted, clear reference
+                self.current_ai_bubble = None
     
     def finish_response(self, final_text=None):
         """Called when agent response is complete"""
@@ -842,7 +869,7 @@ class CommandCenter(QMainWindow):
     def handle_error(self, error_msg):
         """Handle streaming errors"""
         if self.current_ai_bubble:
-            self.current_ai_bubble.update_text(f"Error: {error_msg}")
+            self.current_ai_bubble.update_typed_text(f"Error: {error_msg}")
         self.input_field.setEnabled(True)
 
     def update_heartbeat(self):
@@ -963,22 +990,78 @@ class CommandCenter(QMainWindow):
 
     
     def open_tools_menu(self):
-        """Show Tools Menu (3 dots) with Browser Mode toggle"""
-        from PyQt6.QtWidgets import QMenu
-        from PyQt6.QtGui import QCursor
-        
+        """Open the Premium Feature Menu (Google Style)"""
         menu = QMenu(self)
-        
-        # Browser Mode toggle (like ChatGPT browsing)
-        browser_action = menu.addAction("🌎 Browser Mode: " + ("ON" if self.browser_mode_enabled else "OFF"))
-        browser_action.triggered.connect(self.toggle_browser_mode)
+        # 1. STYLE: Dark, Modern, Spacious (Exact match to your screenshot)
+        menu.setStyleSheet("""
+            QMenu { 
+                background-color: #1E1F20; 
+                color: #E3E3E3; 
+                border: 1px solid #444746; 
+                border-radius: 8px;
+                padding: 5px;
+            }
+            QMenu::item { 
+                padding: 12px 24px; 
+                font-size: 14px; 
+                border-radius: 4px;
+            }
+            QMenu::item:selected { 
+                background-color: #444746; 
+            }
+            QMenu::icon {
+                padding-left: 10px;
+            }
+            QMenu::separator { 
+                background-color: #444746; 
+                height: 1px; 
+                margin: 6px 0px; 
+            }
+        """)
+
+        # --- SECTION 1: INTELLIGENCE (The Modes) ---
+
+        # 🌎 Web Mode (Formerly Browser Mode)
+        # "Deep Research" equivalent
+        web_status = "ON" if getattr(self, 'browser_mode_enabled', False) else "OFF"
+        web_action = QAction(f"🌎  Web Mode (Deep Research): {web_status}", self)
+        web_action.triggered.connect(self.toggle_browser_mode)
+        menu.addAction(web_action)
+
+        # 🏗️ Agent Mode (Architect)
+        # "Deep Thought" equivalent
+        agent_status = "ON" if getattr(self, 'architect_mode', False) else "OFF"
+        agent_action = QAction(f"🧠  Agent Mode (Reasoning): {agent_status}", self)
+        agent_action.triggered.connect(self.toggle_architect_mode)
+        menu.addAction(agent_action)
+
         menu.addSeparator()
+
+        # --- SECTION 2: CREATION (The New Tools) ---
+
+        # 🎬 Create Videos (Veo 3.1)
+        video_action = QAction("🎬  Create videos (Veo 3.1)", self)
+        # linking to actual product info/waitlist for now
+        video_action.triggered.connect(lambda: QDesktopServices.openUrl(QUrl("https://deepmind.google/technologies/veo/")))
+        menu.addAction(video_action)
+
+        # 🎨 Create Images (Imagen 3)
+        image_action = QAction("🎨  Create images (Imagen 3)", self)
+        image_action.triggered.connect(lambda: QDesktopServices.openUrl(QUrl("https://deepmind.google/technologies/imagen-3/")))
+        menu.addAction(image_action)
+
+        # 📄 Canvas
+        canvas_action = QAction("📄  Canvas (Project Workspace)", self)
+        # Opens your local workspace folder
+        canvas_action.triggered.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(os.getcwd())))
+        menu.addAction(canvas_action)
         
-        menu.addAction("Settings", self.open_settings)
-        menu.addAction("Memory", self.open_memory)
-        menu.addAction("Code Generator", self.open_code_generator)
-        menu.addAction("Research", self.open_research)
-        menu.addAction("Terminal", self.open_terminal)
+        # 📚 Guided Learning
+        learn_action = QAction("📚  Guided Learning", self)
+        learn_action.triggered.connect(lambda: self.input_field.setText("Teach me about..."))
+        menu.addAction(learn_action)
+
+        # Show menu at the button's position
         menu.exec(QCursor.pos())
     
     def toggle_browser_mode(self):

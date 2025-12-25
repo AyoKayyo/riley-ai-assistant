@@ -15,28 +15,39 @@ class StreamWorker(QThread):
     finished = pyqtSignal(str)  # Complete response
     error = pyqtSignal(str)  # Error message
     
-    def __init__(self, companion_agent, user_message):
+    def __init__(self, companion_agent, user_message, conversation_db=None, conversation_id=None):
         super().__init__()
         self.companion = companion_agent
         self.message = user_message
         self.full_response = ""
+        self.conversation_db = conversation_db
+        self.conversation_id = conversation_id
     
     def run(self):
         """Stream response from Companion"""
         try:
-            # Use the Companion's intelligent streaming process
-            # This handles routing, tools, and memory internally
+            # Build context from conversation history
+            context = None
+            if self.conversation_db and self.conversation_id:
+                messages = self.conversation_db.get_conversation_messages(self.conversation_id)
+                context = {'conversation_history': messages}
             
-            for token in self.companion.stream_process(self.message):
+            # Stream with context
+            for token in self.companion.stream_process(self.message, context):
                 self.full_response += token
                 self.token_received.emit(self.full_response)
             
-            self.finished.emit(self.full_response)
-            
+        except StopIteration:
+            # Normal end of stream
+            pass
         except Exception as e:
             error_msg = f"Error: {str(e)}\n\n(Note: Check if Ollama is running or if Disk is full)"
             self.error.emit(error_msg)
-            self.finished.emit(error_msg)
+            if not self.full_response:
+                self.full_response = error_msg
+        finally:
+            # ALWAYS emit finished, even on error
+            self.finished.emit(self.full_response)
 
 
 class ArchitectStreamWorker(QThread):
